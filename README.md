@@ -1,87 +1,98 @@
-# Threat Intelligence Exchange Service
+# Kaspersky Threat Intelligence Service
 
-REST-сервис на Go для хранения и обмена информацией о файловых угрозах по MD5-хешу. Реализованы операции создания, получения и полной замены записи об угрозе.
+REST API сервис на Go для хранения и получения информации о файловых угрозах по MD5-хешу.
+
+Сервис позволяет создавать записи об угрозах, получать информацию о них и обновлять существующие записи. Данные хранятся в PostgreSQL.
 
 ## Возможности
 
-- `GET /info/{md5}` — получить запись об угрозе по MD5.
-- `POST /info` — создать запись; MD5 уникален.
-- `PUT /info/{md5}` — полностью заменить редактируемые поля существующей записи.
-- `GET /healthz` — проверить работоспособность HTTP-сервера.
-- PostgreSQL через `pgx/v5`, пул соединений и SQL-миграции, встроенные в бинарный файл.
-- Расширенная модель угрозы и валидация данных.
-- Единый JSON-формат ошибок и соответствующие HTTP-коды.
-- Unit-тесты доменной логики, HTTP-обработчиков и middleware.
-- Интеграционный тест PostgreSQL, который использует только отдельную базу с суффиксом `_test` и уникальный MD5 для каждой записи.
-- Dockerfile с многоэтапной сборкой и Docker Compose.
-- Опциональные API Key, Rate Limit и HTTPS.
-- OpenAPI 3.0 спецификация в `api/openapi.yaml`.
+- Создание записи об угрозе.
+- Получение информации об угрозе по MD5.
+- Обновление существующей записи.
+- Проверка состояния сервиса.
+- Хранение данных в PostgreSQL.
+- Автоматическое применение SQL-миграций при запуске.
+- Проверка входных данных.
+- Опциональная авторизация по API Key.
+- Ограничение количества запросов.
+- Поддержка HTTPS при локальном запуске с настроенными сертификатами.
+- Unit-тесты и интеграционный тест PostgreSQL.
+- Запуск приложения через Docker Compose.
 
-## Модель угрозы
+## Используемые технологии
 
-| Поле | Тип | Назначение |
-|---|---|---|
-| `md5` | string | Уникальный MD5 файла, 32 шестнадцатеричных символа |
-| `name` | string | Название обнаружения, обязательно, до 255 символов |
-| `category` | string | `unknown`, `malware`, `phishing`, `ransomware`, `exploit`, `suspicious` |
-| `severity` | string | `unknown`, `info`, `low`, `medium`, `high`, `critical` |
-| `description` | string | Описание угрозы, до 4000 символов |
-| `family` | string | Семейство, до 255 символов |
-| `confidence` | integer | Уверенность обнаружения от 0 до 100 |
-| `source` | string | Источник данных, до 255 символов |
-| `tags` | string[] | До 20 тегов, каждый до 64 символов |
-| `created_at` | date-time | Время создания записи в UTC |
-| `updated_at` | date-time | Время последнего обновления в UTC |
-
-Для `category` и `severity` используются фиксированные наборы значений. При создании необязательные поля по умолчанию получают `unknown`, пустую строку, `0` или пустой массив.
-
-`PUT` реализован как полная замена редактируемой части ресурса. Поля, пропущенные в PUT-запросе, сбрасываются к значениям по умолчанию; `md5` и `created_at` сохраняются.
+- Go
+- PostgreSQL
+- pgx/v5
+- Docker
+- Docker Compose
+- OpenAPI 3.0
 
 ## Требования
 
+Для запуска приложения понадобятся:
+
 - Go 1.23 или новее.
-- Docker Desktop и Docker Compose — рекомендуемый способ запуска.
-- Для локального запуска Go-процесса нужен доступный PostgreSQL 14+.
+- Docker Desktop.
+- Docker Compose.
 
-## Запуск всего приложения через Docker Compose
+Для запуска Go-приложения без Docker потребуется отдельно установленный PostgreSQL.
 
-В корне проекта выполни:
+## Запуск
+
+Клонировать репозиторий:
+
+```bash
+git clone https://github.com/HummerYT/Kaspersky-threat-intel-service.git
+cd Kaspersky-threat-intel-service
+```
+
+Создать файл конфигурации:
+
+```bash
+cp .env.example .env
+```
+
+Запустить приложение:
 
 ```bash
 docker compose up --build -d
 ```
 
-Проверить контейнеры:
+Проверить состояние контейнеров:
 
 ```bash
 docker compose ps
 ```
 
-Ожидаются два сервиса: `api` и `postgres`. PostgreSQL должен перейти в состояние `healthy`, API — в `Up`.
-
-Посмотреть логи:
+Посмотреть логи API:
 
 ```bash
 docker compose logs -f api
 ```
 
-Проверить API:
+Проверить работоспособность сервиса:
 
 ```bash
-curl -i http://localhost:8080/healthz
+curl http://localhost:8080/healthz
 ```
 
-Ожидаемый ответ: `HTTP/1.1 200 OK` и `{"status":"ok"}`.
+Ожидаемый ответ:
 
-### Порты
+```json
+{
+  "status": "ok"
+}
+```
 
-| Компонент | Адрес | Назначение |
-|---|---|---|
-| Go API на хосте | `localhost:8080` | HTTP API |
-| PostgreSQL на хосте | `localhost:5433` | Подключение из GoLand, psql и локальных инструментов |
-| PostgreSQL внутри Compose | `postgres:5432` | Подключение API-контейнера к базе |
+### Используемые порты
 
-Внешний порт PostgreSQL задан как `5433:5432`, чтобы не конфликтовать с PostgreSQL, который может быть установлен непосредственно на macOS и уже занимать порт `5432`. Внутри Docker-сети API по-прежнему подключается к `postgres:5432`.
+| Сервис | Адрес |
+|---|---|
+| API | `localhost:8080` |
+| PostgreSQL | `localhost:5433` |
+
+Внутри Docker Compose API подключается к PostgreSQL по адресу `postgres:5432`.
 
 Остановить контейнеры, сохранив данные:
 
@@ -89,248 +100,218 @@ curl -i http://localhost:8080/healthz
 docker compose down
 ```
 
-Остановить контейнеры и удалить хранилище PostgreSQL:
-
-```bash
-docker compose down -v
-```
-
-**Внимание:** `docker compose down -v` удаляет Docker volume с данными базы. Не используй эту команду, если данные нужно сохранить.
-
-## Запуск Go API непосредственно из GoLand
-
-Этот режим удобен для отладки исходного кода в IDE. PostgreSQL при этом можно оставить в Docker:
-
-```bash
-docker compose up -d postgres
-```
-
-Проверь, что PostgreSQL доступен на `localhost:5433`:
-
-```bash
-docker compose ps
-```
-
-Открой папку проекта в GoLand — ту, в которой находится `go.mod`. В терминале GoLand выполни:
-
-```bash
-go mod download
-DATABASE_URL='postgres://threats:threats@localhost:5433/threats?sslmode=disable' go run ./cmd/api
-```
-
-Порт `5433` относится к подключению с macOS. Не используй его в `DATABASE_URL` API-контейнера: внутри Docker Compose адрес PostgreSQL — `postgres:5432`.
+Команда `docker compose down -v` дополнительно удаляет том PostgreSQL вместе с данными.
 
 ## Конфигурация
 
-Пример переменных окружения находится в `.env.example`:
+Настройки приложения задаются через переменные окружения.
 
-```bash
-cp .env.example .env
-```
-
-Go-приложение само по себе не загружает `.env`: при локальном запуске добавь значения в Run Configuration GoLand или экспортируй их в shell. Docker Compose автоматически читает файл `.env` из корня проекта для подстановки переменных Compose.
-
-| Переменная | Значение по умолчанию | Назначение |
-|---|---|---|
-| `HTTP_ADDR` | `:8080` | Адрес HTTP-сервера |
-| `DATABASE_URL` | `postgres://threats:threats@localhost:5433/threats?sslmode=disable` в `.env.example` | Строка подключения PostgreSQL для локального Go-процесса |
-| `API_KEY` | пусто | Если задан, все маршруты требуют заголовок `X-API-Key` |
-| `RATE_LIMIT` | `120` | Число запросов с одного IP за минуту; `0` отключает ограничение |
-| `TLS_CERT_FILE` | пусто | Путь к сертификату для локального HTTPS-запуска |
-| `TLS_KEY_FILE` | пусто | Путь к приватному ключу; задаётся вместе с `TLS_CERT_FILE` |
-
-В стандартном Docker Compose API использует внутренний DSN `postgres://threats:threats@postgres:5432/threats?sslmode=disable`. Пароль `threats` предназначен только для локальной демонстрации; перед реальным развёртыванием его необходимо заменить и хранить секреты вне репозитория.
-
-### Проверка API Key
-
-Включить API Key для Compose API-контейнера:
-
-```bash
-API_KEY='dev-test-secret' docker compose up -d --force-recreate api
-```
-
-Запрос без ключа должен вернуть `401 Unauthorized`:
-
-```bash
-curl -i http://localhost:8080/healthz
-```
-
-Запрос с ключом должен вернуть `200 OK`:
-
-```bash
-curl -i http://localhost:8080/healthz \
-  -H 'X-API-Key: dev-test-secret'
-```
-
-Вернуть локальный режим без API Key:
-
-```bash
-API_KEY= docker compose up -d --force-recreate api
-```
-
-`dev-test-secret` — только демонстрационное значение. Не используй его в реальной среде и не коммить действительные секреты в Git.
-
-### HTTPS / TLS
-
-При локальном запуске Go-процесса HTTPS включается, если одновременно заданы `TLS_CERT_FILE` и `TLS_KEY_FILE`. Если задан только один из параметров, приложение завершится с ошибкой конфигурации. Стандартный Compose-файл не монтирует сертификаты в API-контейнер и запускает HTTP; для TLS в контейнерной среде нужно отдельно настроить безопасное подключение сертификатов или использовать reverse proxy.
-
-## Примеры запросов
-
-Для примеров используется MD5 `d41d8cd98f00b204e9800998ecf8427e`. Он нужен только как демонстрационный идентификатор.
-
-### Создать угрозу
-
-```bash
-curl -i -X POST http://localhost:8080/info \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "md5": "d41d8cd98f00b204e9800998ecf8427e",
-    "name": "Trojan.Win32.Generic",
-    "category": "malware",
-    "severity": "high",
-    "description": "Trojan that downloads additional payloads.",
-    "family": "Generic",
-    "confidence": 95,
-    "source": "internal-sandbox",
-    "tags": ["windows", "trojan"]
-  }'
-```
-
-Успешный ответ — `201 Created`. В ответе также содержатся `created_at` и `updated_at`.
-
-### Получить угрозу
-
-```bash
-curl -i http://localhost:8080/info/d41d8cd98f00b204e9800998ecf8427e
-```
-
-### Обновить угрозу
-
-```bash
-curl -i -X PUT http://localhost:8080/info/d41d8cd98f00b204e9800998ecf8427e \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "Trojan.Win32.Generic.v2",
-    "category": "malware",
-    "severity": "critical",
-    "description": "Updated threat description",
-    "family": "Generic",
-    "confidence": 99,
-    "source": "manual-analysis",
-    "tags": ["windows", "trojan", "confirmed"]
-  }'
-```
-
-Поскольку `PUT` полностью заменяет редактируемые поля, пропущенные поля будут сброшены к значениям по умолчанию.
-
-## HTTP-коды
-
-| Код | Условие |
+| Переменная | Назначение |
 |---|---|
-| `200` | Получение или обновление успешно; также успешный healthcheck |
-| `201` | Запись создана |
-| `400` | Некорректный MD5, JSON или поля модели |
-| `401` | `API_KEY` задан, но заголовок `X-API-Key` отсутствует или неверен |
-| `404` | Угроза с таким MD5 не найдена |
-| `409` | Угроза с таким MD5 уже существует |
-| `413` | Тело запроса больше 1 MiB |
-| `415` | `Content-Type` не равен `application/json` |
-| `429` | Превышен rate limit; ответ содержит `Retry-After` |
-| `500` | Внутренняя ошибка сервера |
+| `HTTP_ADDR` | Адрес HTTP-сервера |
+| `DATABASE_URL` | Строка подключения к PostgreSQL |
+| `API_KEY` | Ключ для авторизации запросов |
+| `RATE_LIMIT` | Максимальное количество запросов с одного IP в минуту |
+| `TLS_CERT_FILE` | Путь к TLS-сертификату |
+| `TLS_KEY_FILE` | Путь к приватному TLS-ключу |
 
-Валидация JSON выполняется для `POST` и `PUT`; неизвестные поля отклоняются. Ограничение размера тела — 1 MiB.
+Если `API_KEY` не задан, проверка ключа отключена.
+
+По умолчанию ограничение составляет 120 запросов в минуту с одного IP. Значение `0` отключает ограничение.
+
+Для включения HTTPS необходимо одновременно указать `TLS_CERT_FILE` и `TLS_KEY_FILE`. В стандартной конфигурации Docker Compose используется HTTP.
+
+При локальном запуске Go-приложения файл `.env` автоматически не загружается. Переменные необходимо передать через терминал или настройки запуска IDE.
+
+## API
+
+Полная спецификация API находится в файле [`api/openapi.yaml`](api/openapi.yaml).
+
+### Доступные методы
+
+| Метод | Endpoint | Описание |
+|---|---|---|
+| GET | `/healthz` | Проверка состояния сервиса |
+| GET | `/info/{md5}` | Получение информации об угрозе |
+| POST | `/info` | Создание записи |
+| PUT | `/info/{md5}` | Обновление записи |
+
+### Создание записи
+
+Запрос:
+
+```http
+POST /info
+Content-Type: application/json
+```
+
+Пример:
+
+```json
+{
+  "md5": "d41d8cd98f00b204e9800998ecf8427e",
+  "name": "Trojan.Win32.Generic",
+  "category": "malware",
+  "severity": "high",
+  "description": "Trojan that downloads additional payloads.",
+  "family": "Generic",
+  "confidence": 95,
+  "source": "internal-sandbox",
+  "tags": ["windows", "trojan"]
+}
+```
+
+Успешный ответ: `201 Created`.
+
+### Получение записи
+
+Запрос:
+
+```bash
+curl http://localhost:8080/info/d41d8cd98f00b204e9800998ecf8427e
+```
+
+Успешный ответ: `200 OK`.
+
+### Обновление записи
+
+Запрос:
+
+```http
+PUT /info/d41d8cd98f00b204e9800998ecf8427e
+Content-Type: application/json
+```
+
+Пример:
+
+```json
+{
+  "name": "Trojan.Win32.Generic.v2",
+  "category": "malware",
+  "severity": "critical",
+  "description": "Updated threat description",
+  "family": "Generic",
+  "confidence": 99,
+  "source": "manual-analysis",
+  "tags": ["windows", "trojan", "confirmed"]
+}
+```
+
+Успешный ответ: `200 OK`.
+
+`PUT` полностью заменяет редактируемые поля записи. Если поле не передано, оно получает значение по умолчанию. MD5 и дата создания сохраняются.
+
+## Модель данных
+
+| Поле | Тип | Описание |
+|---|---|---|
+| `md5` | string | MD5-хеш файла, 32 шестнадцатеричных символа |
+| `name` | string | Название обнаружения |
+| `category` | string | Категория угрозы |
+| `severity` | string | Уровень опасности |
+| `description` | string | Описание угрозы |
+| `family` | string | Семейство вредоносного ПО |
+| `confidence` | integer | Уверенность обнаружения от 0 до 100 |
+| `source` | string | Источник информации |
+| `tags` | string[] | Список тегов |
+| `created_at` | date-time | Дата создания записи |
+| `updated_at` | date-time | Дата обновления записи |
+
+Допустимые категории:
+
+- `unknown`
+- `malware`
+- `phishing`
+- `ransomware`
+- `exploit`
+- `suspicious`
+
+Допустимые уровни опасности:
+
+- `unknown`
+- `info`
+- `low`
+- `medium`
+- `high`
+- `critical`
+
+MD5 является уникальным идентификатором записи.
+
+## HTTP-коды ответов
+
+| Код | Описание |
+|---|---|
+| `200` | Запрос выполнен успешно |
+| `201` | Запись создана |
+| `400` | Некорректные данные запроса |
+| `401` | Отсутствует или неверен API Key |
+| `404` | Запись не найдена |
+| `409` | Запись с таким MD5 уже существует |
+| `413` | Размер тела запроса превышает допустимый |
+| `415` | Неподдерживаемый Content-Type |
+| `429` | Превышено ограничение запросов |
+| `500` | Внутренняя ошибка сервера |
 
 ## Тестирование
 
-Unit-тесты без внешних сервисов:
+Запустить все тесты:
 
 ```bash
 go test ./...
 ```
 
-Проверка гонок данных:
+Запустить тесты с проверкой гонок данных:
 
 ```bash
 go test -race ./...
 ```
 
-Покрытие:
+Посмотреть покрытие тестами:
 
 ```bash
 go test -cover ./...
 ```
 
-Статический анализ и сборка:
+Проверить код с помощью `go vet`:
 
 ```bash
 go vet ./...
+```
+
+Собрать приложение:
+
+```bash
 go build ./cmd/api
 ```
 
 ### Интеграционный тест PostgreSQL
 
-Интеграционный тест использует реальную PostgreSQL-базу. Для защиты данных тест отказывается работать с базой, имя которой не заканчивается на `_test`. Для каждой попытки генерируется случайный 32-символьный MD5; тест удаляет только созданную им запись.
+Для интеграционного теста используется отдельная база данных. Её имя обязательно должно заканчиваться на `_test`.
 
-Подними PostgreSQL:
+Запустить PostgreSQL:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Создай отдельную базу:
+Создать тестовую базу:
 
 ```bash
 docker compose exec postgres createdb -U threats threats_test
 ```
 
-Запусти тест:
+Запустить интеграционный тест:
 
 ```bash
 TEST_DATABASE_URL='postgres://threats:threats@localhost:5433/threats_test?sslmode=disable' \
-  go test -race -cover ./internal/postgres -run '^TestPostgresRepositoryCRUD$' -count=1 -v
+go test -race -cover ./internal/postgres -run '^TestPostgresRepositoryCRUD$' -count=1 -v
 ```
 
-Или через Makefile:
+Тест проверяет основные операции с PostgreSQL. Он использует отдельный MD5 и удаляет созданную им запись после выполнения.
 
-```bash
-make test-integration TEST_DATABASE_URL='postgres://threats:threats@localhost:5433/threats_test?sslmode=disable'
-```
+**Важно:** не указывайте основную или рабочую базу данных в `TEST_DATABASE_URL`.
 
-**Не указывай основную базу `threats` или production database в `TEST_DATABASE_URL`.** Тест проверяет имя базы и работает только с базой, имя которой оканчивается на `_test`.
+## Дополнительно
 
-## Структура проекта
-
-```text
-.
-├── api/openapi.yaml
-├── cmd/api/main.go
-├── internal/
-│   ├── config/config.go
-│   ├── domain/
-│   │   ├── threat.go
-│   │   └── threat_test.go
-│   ├── httpapi/
-│   │   ├── handler.go
-│   │   ├── handler_test.go
-│   │   └── middleware.go
-│   ├── postgres/
-│   │   ├── migrations/001_create_threats.sql
-│   │   ├── migrate.go
-│   │   ├── postgres.go
-│   │   └── postgres_integration_test.go
-│   └── repository/
-│       ├── memory.go
-│       └── repository.go
-├── .env.example
-├── Dockerfile
-├── Makefile
-├── docker-compose.yml
-├── go.mod
-└── README.md
-```
-
-## Архитектура
-
-HTTP-слой не содержит SQL и работает через интерфейс `ThreatRepository`. Доменный пакет отвечает за модель и валидацию. Для основного запуска используется PostgreSQL-реализация репозитория; HTTP-тесты используют потокобезопасную in-memory реализацию.
-
-Rate limiter хранит счётчики в памяти процесса. Для нескольких реплик сервиса в production такой лимитер следует заменить общим хранилищем, например Redis, или вынести ограничение в API gateway. `X-Forwarded-For` намеренно не считается доверенным: при размещении за reverse proxy источник клиентского IP нужно настраивать отдельно.
+- OpenAPI-спецификация: [`api/openapi.yaml`](api/openapi.yaml)
+- Исходный код: [GitHub](https://github.com/HummerYT/Kaspersky-threat-intel-service)
