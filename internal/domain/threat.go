@@ -37,7 +37,6 @@ var (
 	ErrInvalidText       = errors.New("description, family and source exceed the allowed length")
 )
 
-// Threat describes a file-related threat intelligence record.
 type Threat struct {
 	MD5         string    `json:"md5"`
 	Name        string    `json:"name"`
@@ -52,7 +51,6 @@ type Threat struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// CreateThreatInput contains fields accepted when creating a threat.
 type CreateThreatInput struct {
 	MD5         string   `json:"md5"`
 	Name        string   `json:"name"`
@@ -65,8 +63,6 @@ type CreateThreatInput struct {
 	Tags        []string `json:"tags,omitempty"`
 }
 
-// UpdateThreatInput represents a full replacement of the editable threat fields.
-// Fields omitted from a PUT request are reset to their defaults.
 type UpdateThreatInput struct {
 	Name        string   `json:"name"`
 	Category    string   `json:"category,omitempty"`
@@ -78,7 +74,6 @@ type UpdateThreatInput struct {
 	Tags        []string `json:"tags,omitempty"`
 }
 
-// NormalizeMD5 validates and normalizes an MD5 hash to lowercase.
 func NormalizeMD5(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if !md5Pattern.MatchString(value) {
@@ -87,7 +82,6 @@ func NormalizeMD5(value string) (string, error) {
 	return strings.ToLower(value), nil
 }
 
-// NewThreat validates and converts a create request into the domain model.
 func NewThreat(input CreateThreatInput, now time.Time) (Threat, error) {
 	md5, err := NormalizeMD5(input.MD5)
 	if err != nil {
@@ -116,7 +110,6 @@ func NewThreat(input CreateThreatInput, now time.Time) (Threat, error) {
 	return threat, nil
 }
 
-// ApplyUpdate creates a replacement model while preserving the identity and creation time.
 func (t Threat) ApplyUpdate(input UpdateThreatInput, now time.Time) (Threat, error) {
 	updated := Threat{
 		MD5:         t.MD5,
@@ -139,7 +132,6 @@ func (t Threat) ApplyUpdate(input UpdateThreatInput, now time.Time) (Threat, err
 	return updated, nil
 }
 
-// ValidateThreat validates all fields that can be stored in the database.
 func ValidateThreat(t Threat) error {
 	if _, err := NormalizeMD5(t.MD5); err != nil {
 		return err
@@ -197,7 +189,6 @@ func oneOf(value string, allowed ...string) bool {
 	return false
 }
 
-// ValidationMessage returns a stable, client-safe validation message.
 func ValidationMessage(err error) string {
 	switch {
 	case errors.Is(err, ErrInvalidMD5):

@@ -7,9 +7,6 @@ servers:
   - url: http://localhost:8080
     description: Локальный сервер
 
-# API-key authentication is optional at deployment time. When API_KEY is configured,
-# the server requires X-API-Key. The empty security requirement documents deployments
-# where API_KEY is not configured.
 security:
   - ApiKeyAuth: []
   - {}

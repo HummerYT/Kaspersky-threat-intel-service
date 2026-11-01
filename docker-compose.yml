@@ -1,11 +1,9 @@
-
 services:
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: threats
       POSTGRES_USER: threats
-      # Development-only password.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-threats}
     ports:
       - "5433:5432"

@@ -1,4 +1,3 @@
-// Package httpapi implements the REST transport layer.
 package httpapi
 
 import (
@@ -30,7 +29,6 @@ func NewHandler(repo repository.ThreatRepository, logger *slog.Logger) *Handler 
 	return &Handler{repo: repo, logger: logger, now: time.Now}
 }
 
-// Routes returns the service routes. Go 1.22+ method-aware ServeMux patterns are used.
 func (h *Handler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", h.health)

@@ -13,7 +13,6 @@ import (
 	"threat-intel-service/internal/repository"
 )
 
-// PostgresRepository persists threat records in PostgreSQL.
 type PostgresRepository struct {
 	pool *pgxpool.Pool
 }

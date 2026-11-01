@@ -15,8 +15,6 @@ test-race:
 test-cover:
 	$(GO) test -cover ./...
 
-# TEST_DATABASE_URL must point to a dedicated database whose name ends in _test.
-# The integration test checks this before applying migrations or writing data.
 test-integration:
 	@test -n "$(TEST_DATABASE_URL)" || (echo "Set TEST_DATABASE_URL to a dedicated *_test database" >&2; exit 1)
 	TEST_DATABASE_URL="$(TEST_DATABASE_URL)" $(GO) test ./internal/postgres -run '^TestPostgresRepositoryCRUD$$' -count=1 -v

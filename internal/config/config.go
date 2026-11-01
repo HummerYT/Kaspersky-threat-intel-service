@@ -1,4 +1,3 @@
-// Package config loads service configuration from environment variables.
 package config
 
 import (
@@ -23,9 +22,7 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr: env("HTTP_ADDR", ":8080"),
-		// 5433 is the host port mapped to PostgreSQL in docker-compose.yml.
-		// The API container uses its internal Compose address postgres:5432.
+		HTTPAddr:     env("HTTP_ADDR", ":8080"),
 		DatabaseURL:  env("DATABASE_URL", "postgres://threats:threats@localhost:5433/threats?sslmode=disable"),
 		APIKey:       os.Getenv("API_KEY"),
 		TLSCertFile:  os.Getenv("TLS_CERT_FILE"),

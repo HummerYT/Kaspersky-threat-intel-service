@@ -1,4 +1,3 @@
-// Package repository defines persistence contracts and shared errors.
 package repository
 
 import (
